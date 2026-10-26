@@ -1272,6 +1272,7 @@
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .ts-market-table tbody tr {
@@ -1288,6 +1289,7 @@
   padding: 14px 18px;
   font-size: 13px;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .market-symbol-cell {
@@ -1350,6 +1352,7 @@
 .row-action-group {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 

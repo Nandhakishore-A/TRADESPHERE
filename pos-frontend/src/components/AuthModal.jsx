@@ -239,7 +239,7 @@ export default function AuthModal({
               className="btn-demo-pill"
               onClick={() => handleDemoLogin('admin@tradesphere.io', 'Password123!')}
             >
-              <Sparkles size={12} /> Admin (Karthikeyan)
+              <Sparkles size={12} /> Admin (Nandhakishore)
             </button>
             <button
               type="button"

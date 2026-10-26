@@ -102,10 +102,10 @@ export default function WatchlistView({
           <table className="ts-market-table">
             <thead>
               <tr>
-                <th>Symbol &amp; Company</th>
-                <th>Price</th>
-                <th>Change</th>
-                <th>Day Chart</th>
+                <th style={{ textAlign: 'left' }}>Symbol &amp; Company</th>
+                <th style={{ textAlign: 'right' }}>Price</th>
+                <th style={{ textAlign: 'right' }}>24h Change</th>
+                <th style={{ textAlign: 'center' }}>Day Trend</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -135,21 +135,21 @@ export default function WatchlistView({
                       </div>
                     </td>
 
-                    <td>
+                    <td style={{ textAlign: 'right' }}>
                       <strong className="stock-price-tabular">
-                        ${stock.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${stock.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </strong>
                     </td>
 
-                    <td>
+                    <td style={{ textAlign: 'right' }}>
                       <span className={`trend-badge-pill ${stock.isUp ? 'trend-badge-up' : 'trend-badge-down'}`}>
                         {stock.isUp ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
                         {stock.change}
                       </span>
                     </td>
 
-                    <td>
-                      <svg width="120" height="24" viewBox="0 0 80 24" fill="none">
+                    <td style={{ textAlign: 'center' }}>
+                      <svg width="120" height="24" viewBox="0 0 80 24" fill="none" style={{ display: 'inline-block' }}>
                         <path
                           d={stock.path}
                           stroke={stock.isUp ? '#10B981' : '#EF4444'}
@@ -160,7 +160,7 @@ export default function WatchlistView({
                     </td>
 
                     <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                      <div className="row-action-group">
+                      <div className="row-action-group" style={{ justifyContent: 'flex-end' }}>
                         <button
                           type="button"
                           className="btn-table-trade"

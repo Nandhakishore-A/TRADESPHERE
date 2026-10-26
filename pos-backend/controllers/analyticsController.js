@@ -3,20 +3,21 @@ const Product = require('../models/Product');
 
 const getDashboardSummary = async (req, res) => {
   try {
-    try {
-      const orderStats = await Order.aggregate([
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 },
-            totalSales: {
-              $sum: {
-                $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$totalAmount', 0],
+    if (req.dbConnected) {
+      try {
+        const orderStats = await Order.aggregate([
+          {
+            $group: {
+              _id: '$status',
+              count: { $sum: 1 },
+              totalSales: {
+                $sum: {
+                  $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$totalAmount', 0],
+                },
               },
             },
           },
-        },
-      ]);
+        ]);
 
       let totalRevenue = 0;
       let completedOrders = 0;

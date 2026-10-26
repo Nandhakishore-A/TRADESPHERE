@@ -38,16 +38,18 @@ const getProducts = async (req, res) => {
       query.category = category;
     }
 
-    try {
-      const products = await Product.find(query).sort({ createdAt: -1 });
-      if (products && products.length > 0) {
-        const filtered = lowStock === 'true'
-          ? products.filter((p) => p.stock <= p.lowStockThreshold)
-          : products;
-        return res.json(filtered);
+    if (req.dbConnected) {
+      try {
+        const products = await Product.find(query).sort({ createdAt: -1 });
+        if (products && products.length > 0) {
+          const filtered = lowStock === 'true'
+            ? products.filter((p) => p.stock <= p.lowStockThreshold)
+            : products;
+          return res.json(filtered);
+        }
+      } catch (dbErr) {
+        console.warn('[TradeSphere] Live DB query error, serving resilient equities catalog');
       }
-    } catch (dbErr) {
-      console.warn('[TradeSphere] Live DB query error, serving resilient equities catalog');
     }
 
     // Graceful fallback from inMemoryStocks
@@ -71,13 +73,15 @@ const getProducts = async (req, res) => {
 // 2. Get single product
 const getProductById = async (req, res) => {
   try {
-    try {
-      const product = await Product.findById(req.params.id);
-      if (product && product.isActive) {
-        return res.json(product);
+    if (req.dbConnected) {
+      try {
+        const product = await Product.findById(req.params.id);
+        if (product && product.isActive) {
+          return res.json(product);
+        }
+      } catch (dbErr) {
+        // Fallback
       }
-    } catch (dbErr) {
-      // Fallback
     }
 
     const found = inMemoryStocks.find((s) => s._id === req.params.id || s.sku === req.params.id);
@@ -113,19 +117,20 @@ const createProduct = async (req, res) => {
 
     const generatedSku = (sku || `STK-${Date.now().toString().slice(-5)}`).toUpperCase();
 
-    try {
-      const product = new Product({
-        name: name.trim(),
-        sku: generatedSku,
-        category: category ? category.trim() : 'General',
-        price: parsedPrice,
-        stock: parsedStock,
-        lowStockThreshold: parsedThreshold,
-      });
+    if (req.dbConnected) {
+      try {
+        const product = new Product({
+          name: name.trim(),
+          sku: generatedSku,
+          category: category ? category.trim() : 'General',
+          price: parsedPrice,
+          stock: parsedStock,
+          lowStockThreshold: parsedThreshold,
+        });
 
-      await product.save();
+        await product.save();
 
-      await AuditLog.create({
+        await AuditLog.create({
         action: 'STOCK_ADDED',
         entityType: 'PRODUCT',
         entityId: product._id.toString(),

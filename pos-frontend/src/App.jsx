@@ -174,6 +174,10 @@ export default function App() {
       setIsProcessingTrade(true);
       const idempotencyKey = `TRADE-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+      // Resolve valid product identifier from catalog or SKU
+      const matched = stocks.find((s) => s.sku === (stock.sku || stock.symbol)) || stock;
+      const targetProductId = matched._id || matched.stockId || stock._id || stock.stockId || stock.sku || stock.symbol || 'stock-rel-01';
+
       // 1. Reserve Order
       const reserveRes = await fetch(`${API_BASE_URL}/api/orders/reserve`, {
         method: 'POST',
@@ -183,7 +187,10 @@ export default function App() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          productId: stock._id || stock.stockId,
+          productId: targetProductId,
+          sku: stock.sku || stock.symbol,
+          name: stock.name,
+          price,
           quantity,
           idempotencyKey,
         }),

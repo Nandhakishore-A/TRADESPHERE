@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   ShieldCheck
@@ -16,6 +16,16 @@ export default function TradeModal({
   const [orderType, setOrderType] = useState('Market');
   const [quantity, setQuantity] = useState(10);
   const [customPrice, setCustomPrice] = useState(stock ? stock.price : 100);
+
+  // Sync state whenever modal is opened or target stock / side changes
+  useEffect(() => {
+    if (isOpen) {
+      setSide(initialSide || 'BUY');
+      setOrderType('Market');
+      setQuantity(10);
+      setCustomPrice(stock ? stock.price : 100);
+    }
+  }, [isOpen, initialSide, stock]);
 
   if (!isOpen) return null;
 

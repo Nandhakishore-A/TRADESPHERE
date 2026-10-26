@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const AuditLog = require('../models/AuditLog');
@@ -122,20 +123,40 @@ const reserveOrder = async (req, res) => {
           throw new Error(`Invalid item payload or quantity for product ${raw.productId}`);
         }
 
+        const isObjectId = mongoose.Types.ObjectId.isValid(raw.productId);
+        const searchCriteria = {
+          $or: [
+            ...(isObjectId ? [{ _id: raw.productId }] : []),
+            ...(raw.sku ? [{ sku: String(raw.sku).toUpperCase() }] : []),
+            { sku: String(raw.productId).toUpperCase() },
+            ...(raw.name ? [{ name: raw.name }] : []),
+          ],
+          stock: { $gte: qty },
+          isActive: true,
+        };
+
         const updatedProduct = await Product.findOneAndUpdate(
-          { _id: raw.productId, stock: { $gte: qty }, isActive: true },
+          searchCriteria,
           { $inc: { stock: -qty, reservedStock: qty } },
           { new: true }
         );
 
         if (!updatedProduct) {
-          const productInfo = await Product.findById(raw.productId);
+          const productInfo = isObjectId
+            ? await Product.findById(raw.productId)
+            : await Product.findOne({
+                $or: [
+                  ...(raw.sku ? [{ sku: String(raw.sku).toUpperCase() }] : []),
+                  { sku: String(raw.productId).toUpperCase() },
+                  ...(raw.name ? [{ name: raw.name }] : []),
+                ],
+              });
           const availableStock = productInfo ? productInfo.stock : 0;
-          const productName = productInfo ? productInfo.name : raw.productId;
+          const productName = productInfo ? productInfo.name : (raw.name || raw.productId);
           throw new Error(`Insufficient stock for "${productName}". Requested: ${qty}, Available: ${availableStock}`);
         }
 
-        rollbackList.push({ productId: raw.productId, quantity: qty });
+        rollbackList.push({ productId: updatedProduct._id, quantity: qty });
 
         const itemSubtotal = updatedProduct.price * qty;
         totalAmount += itemSubtotal;
@@ -235,9 +256,11 @@ const reserveOrder = async (req, res) => {
     });
   } catch (err) {
     for (const r of rollbackList) {
-      await Product.findByIdAndUpdate(r.productId, {
-        $inc: { stock: r.quantity, reservedStock: -r.quantity },
-      }).catch(() => null);
+      if (mongoose.Types.ObjectId.isValid(r.productId)) {
+        await Product.findByIdAndUpdate(r.productId, {
+          $inc: { stock: r.quantity, reservedStock: -r.quantity },
+        }).catch(() => null);
+      }
     }
     res.status(400).json({ error: err.message });
   }

@@ -85,12 +85,12 @@ export default function TransactionsView({ orders = [] }) {
           <table className="ts-market-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Symbol</th>
-                <th>Shares</th>
-                <th>Price</th>
-                <th>Total</th>
+                <th style={{ textAlign: 'left' }}>Date</th>
+                <th style={{ textAlign: 'left' }}>Type</th>
+                <th style={{ textAlign: 'left' }}>Symbol</th>
+                <th style={{ textAlign: 'center' }}>Shares</th>
+                <th style={{ textAlign: 'right' }}>Execution Price</th>
+                <th style={{ textAlign: 'right' }}>Total Amount</th>
                 <th style={{ textAlign: 'right' }}>Status</th>
               </tr>
             </thead>
@@ -114,10 +114,10 @@ export default function TransactionsView({ orders = [] }) {
                       <strong className="stock-primary-name">{t.symbol}</strong>
                       <div className="text-muted text-xs">Ref: {t.id}</div>
                     </td>
-                    <td>{t.shares}</td>
-                    <td>${Number(t.price).toFixed(2)}</td>
-                    <td>
-                      <strong>${Number(t.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                    <td style={{ textAlign: 'center' }}>{t.shares}</td>
+                    <td style={{ textAlign: 'right' }}>${Number(t.price).toFixed(2)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <strong>${Number(t.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       {t.status === 'COMPLETED' ? (

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const AuditLog = require('../models/AuditLog');
@@ -8,6 +9,9 @@ const AuditLog = require('../models/AuditLog');
  */
 const cleanupExpiredOrders = async () => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return { expiredCount: 0 };
+    }
     const now = new Date();
     const expiredOrders = await Order.find({
       status: 'RESERVED',
