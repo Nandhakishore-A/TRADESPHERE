@@ -2,7 +2,11 @@
 
 **TradeSphere** is an industry-grade, full-stack MERN (MongoDB Atlas, Express, React 19, Node.js) platform designed for stock market analytics, equity tracking, and multi-asset portfolio management. Featuring a dark obsidian fintech design system, concurrency-safe atomic trade executions, 5-minute reservation hold windows with automated stock restitution, operational audit trails, and live database aggregation analytics.
 
-**Repository:** [https://github.com/Nandhakishore-A/TRADESPHERE](https://github.com/Nandhakishore-A/TRADESPHERE)
+- **Author:** **Nandhakishore A** (*Forward Deployed Engineer*)
+- **GitHub Repository:** [https://github.com/Nandhakishore-A/TRADESPHERE](https://github.com/Nandhakishore-A/TRADESPHERE)
+- **Live Production Client:** [https://pos-frontend-jet.vercel.app/](https://pos-frontend-jet.vercel.app/)
+- **Live Backend API:** [https://tradesphere-swart.vercel.app/](https://tradesphere-swart.vercel.app/)
+- **API Health Check:** [https://tradesphere-swart.vercel.app/api/health](https://tradesphere-swart.vercel.app/api/health)
 
 ---
 
@@ -182,6 +186,17 @@ npm run build
    - Orders remaining pending beyond 5 minutes transition to `EXPIRED`.
    - The worker executes `$inc: { stock: quantity, reservedStock: -quantity }` to atomically restore shares to the market.
    - The restitution event is permanently recorded in the immutable operational audit log.
+
+---
+
+## 👨‍💻 Author & Engineering Leadership
+
+**Nandhakishore A**  
+*Forward Deployed Engineer*  
+- **GitHub:** [@Nandhakishore-A](https://github.com/Nandhakishore-A)  
+- **Email:** [nandhakishore252@gmail.com](mailto:nandhakishore252@gmail.com)  
+- **Live Platform:** [https://pos-frontend-jet.vercel.app/](https://pos-frontend-jet.vercel.app/)  
+- **API Microservice:** [https://tradesphere-swart.vercel.app/](https://tradesphere-swart.vercel.app/)  
 
 ---
 

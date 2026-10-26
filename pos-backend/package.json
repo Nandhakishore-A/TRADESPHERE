@@ -17,6 +17,7 @@
     "trading",
     "mern"
   ],
+  "author": "Nandhakishore A <nandhakishore252@gmail.com> (Forward Deployed Engineer)",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",
