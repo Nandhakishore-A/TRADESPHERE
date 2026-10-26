@@ -14,8 +14,12 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 
-// Global Middleware
-app.use(cors());
+// Global Middleware with Permissive Production CORS
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
+}));
 app.use(express.json());
 
 // Root & Health Check Endpoints (Always responsive for Vercel, monitoring, and health probes)
@@ -97,7 +101,7 @@ if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
 }
 
 const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'production' && require.main === module) {
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`[TradeSphere] Server running on http://localhost:${PORT}`);
   });

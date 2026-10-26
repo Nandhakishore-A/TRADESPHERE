@@ -116,22 +116,37 @@ npm run dev
 
 ## ☁️ Deployment on Vercel
 
-TradeSphere is architected for seamless multi-project deployment on [Vercel](https://vercel.com):
+TradeSphere is architected for both **Unified 1-Click Deployment** and **Separate Microservice Deployment** on [Vercel](https://vercel.com):
 
-### Step 1: Deploy Backend API
+### Option A: Unified 1-Click Deployment (Recommended)
+Deploy both the React frontend and Express serverless API in a single Vercel project with zero cross-origin configuration:
+
+1. In Vercel, click **Add New Project** and import **`Nandhakishore-A/TRADESPHERE`**.
+2. Leave **Root Directory** as default (`./`). Vercel will automatically read the root `vercel.json` and build the client to `pos-frontend/dist` while exposing `/api/*` serverless functions.
+3. Under **Environment Variables**, add:
+   - `MONGO_URI`: `mongodb+srv://<username>:<password>@cluster0.mongodb.net/tradesphere?retryWrites=true&w=majority`
+   - `JWT_SECRET`: `tradesphere-super-secure-production-secret-2026`
+   - `NODE_ENV`: `production`
+4. Click **Deploy**. Your entire trading platform is live under a single domain with zero CORS issues!
+
+---
+
+### Option B: Dual-Project Deployment (Frontend & Backend Separated)
+
+#### Step 1: Deploy Backend API
 1. On Vercel, click **Add New Project** and import `Nandhakishore-A/TRADESPHERE`.
 2. Under **Root Directory**, click **Edit** and select `pos-backend`.
-3. Add the following **Environment Variables**:
+3. Add the Environment Variables:
    - `MONGO_URI`: your MongoDB Atlas connection string
    - `JWT_SECRET`: your preferred secret key
    - `NODE_ENV`: `production`
 4. Click **Deploy**. Note your backend production URL (e.g., `https://tradesphere-backend.vercel.app`).
 
-### Step 2: Deploy Frontend Client
+#### Step 2: Deploy Frontend Client
 1. On Vercel, click **Add New Project** and import `Nandhakishore-A/TRADESPHERE` again.
 2. Under **Root Directory**, click **Edit** and select `pos-frontend`.
 3. Framework Preset: **Vite**.
-4. Add the following **Environment Variable**:
+4. Add the Environment Variable:
    - `VITE_API_BASE_URL`: `https://tradesphere-backend.vercel.app` (your backend URL from Step 1)
 5. Click **Deploy**. Your TradeSphere platform is live!
 
