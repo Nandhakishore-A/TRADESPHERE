@@ -9,62 +9,70 @@ import {
 } from 'lucide-react';
 
 export default function DashboardView({
-  portfolioData: _portfolioData,
   stocks = [],
   orders = [],
   onSelectStock,
   onOpenTradeModal: _onOpenTradeModal,
   onSelectView,
+  portfolioMetrics = {}
 }) {
   const [chartTimeframe, setChartTimeframe] = useState('1Y');
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
+  // Dynamic values or defaults
+  const portfolioVal = portfolioMetrics.portfolioValue || 24567.89;
+  const investedVal = portfolioMetrics.totalInvested || 18450.00;
+  const totalPnL = portfolioMetrics.totalPnL || (portfolioVal - investedVal);
+  const totalReturnPct = portfolioMetrics.totalReturnPct || ((totalPnL / investedVal) * 100);
+  const todayPnL = portfolioMetrics.todayPnL || 1234.56;
+  const todayReturnPct = ((todayPnL / (portfolioVal - todayPnL)) * 100).toFixed(2);
+
   // Timeframe chart datasets for portfolio growth simulation
   const chartDatasets = {
     '1D': [
-      { label: '09:30', val: 24100 },
-      { label: '11:00', val: 24220 },
-      { label: '12:30', val: 24180 },
-      { label: '14:00', val: 24450 },
-      { label: '15:30', val: 24567.89 },
+      { label: '09:30', val: portfolioVal * 0.985 },
+      { label: '11:00', val: portfolioVal * 0.992 },
+      { label: '12:30', val: portfolioVal * 0.989 },
+      { label: '14:00', val: portfolioVal * 0.996 },
+      { label: '15:30', val: portfolioVal },
     ],
     '1W': [
-      { label: 'Mon', val: 23600 },
-      { label: 'Tue', val: 23900 },
-      { label: 'Wed', val: 23800 },
-      { label: 'Thu', val: 24250 },
-      { label: 'Fri', val: 24567.89 },
+      { label: 'Mon', val: portfolioVal * 0.965 },
+      { label: 'Tue', val: portfolioVal * 0.978 },
+      { label: 'Wed', val: portfolioVal * 0.972 },
+      { label: 'Thu', val: portfolioVal * 0.989 },
+      { label: 'Fri', val: portfolioVal },
     ],
     '1M': [
-      { label: 'Week 1', val: 22800 },
-      { label: 'Week 2', val: 23400 },
-      { label: 'Week 3', val: 23950 },
-      { label: 'Week 4', val: 24567.89 },
+      { label: 'Week 1', val: portfolioVal * 0.93 },
+      { label: 'Week 2', val: portfolioVal * 0.95 },
+      { label: 'Week 3', val: portfolioVal * 0.975 },
+      { label: 'Week 4', val: portfolioVal },
     ],
     '3M': [
-      { label: 'Oct', val: 21500 },
-      { label: 'Nov', val: 22900 },
-      { label: 'Dec', val: 24567.89 },
+      { label: 'Month 1', val: portfolioVal * 0.88 },
+      { label: 'Month 2', val: portfolioVal * 0.93 },
+      { label: 'Month 3', val: portfolioVal },
     ],
     '1Y': [
-      { label: 'Jan', val: 18450 },
-      { label: 'Feb', val: 19100 },
-      { label: 'Mar', val: 18950 },
-      { label: 'Apr', val: 19800 },
-      { label: 'May', val: 20400 },
-      { label: 'Jun', val: 21200 },
-      { label: 'Jul', val: 20900 },
-      { label: 'Aug', val: 22100 },
-      { label: 'Sep', val: 22850 },
-      { label: 'Oct', val: 23400 },
-      { label: 'Nov', val: 23950 },
-      { label: 'Dec', val: 24567.89 },
+      { label: 'Jan', val: investedVal },
+      { label: 'Feb', val: investedVal * 1.04 },
+      { label: 'Mar', val: investedVal * 1.03 },
+      { label: 'Apr', val: investedVal * 1.08 },
+      { label: 'May', val: investedVal * 1.11 },
+      { label: 'Jun', val: investedVal * 1.15 },
+      { label: 'Jul', val: investedVal * 1.14 },
+      { label: 'Aug', val: investedVal * 1.20 },
+      { label: 'Sep', val: investedVal * 1.24 },
+      { label: 'Oct', val: investedVal * 1.27 },
+      { label: 'Nov', val: investedVal * 1.30 },
+      { label: 'Dec', val: portfolioVal },
     ],
     'ALL': [
-      { label: '2021', val: 12000 },
-      { label: '2022', val: 15400 },
-      { label: '2023', val: 18200 },
-      { label: '2024', val: 24567.89 },
+      { label: '2021', val: investedVal * 0.65 },
+      { label: '2022', val: investedVal * 0.84 },
+      { label: '2023', val: investedVal * 0.98 },
+      { label: '2024', val: portfolioVal },
     ],
   };
 
@@ -93,7 +101,7 @@ export default function DashboardView({
 
   const areaD = `${pathD} L ${points[points.length - 1].x} ${chartHeight - paddingY} L ${points[0].x} ${chartHeight - paddingY} Z`;
 
-  // Top Gainers data matching the screenshot
+  // Top Gainers data
   const topGainers = [
     { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2892.45, change: '+5.23%', isPositive: true },
     { symbol: 'TCS', name: 'Tata Consultancy Services', price: 4123.80, change: '+4.56%', isPositive: true },
@@ -102,7 +110,7 @@ export default function DashboardView({
     { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1234.50, change: '+2.89%', isPositive: true },
   ];
 
-  // Top Losers data matching the screenshot
+  // Top Losers data
   const topLosers = [
     { symbol: 'ADANIENT', name: 'Adani Enterprises', price: 3245.70, change: '-2.34%', isPositive: false },
     { symbol: 'SBIN', name: 'State Bank of India', price: 612.40, change: '-1.89%', isPositive: false },
@@ -111,7 +119,7 @@ export default function DashboardView({
     { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', price: 1890.35, change: '-0.85%', isPositive: false },
   ];
 
-  // Market Indices matching the screenshot
+  // Market Indices
   const marketIndices = [
     { name: 'S&P 500', value: '5,038.45', change: '+1.23%', isUp: true, path: 'M0,15 Q20,18 40,10 T80,5' },
     { name: 'NASDAQ', value: '15,628.32', change: '+1.56%', isUp: true, path: 'M0,18 Q20,12 40,14 T80,4' },
@@ -122,14 +130,18 @@ export default function DashboardView({
 
   // Recent Transactions preview
   const recentTrades = orders.length > 0
-    ? orders.slice(0, 4).map((o) => ({
-        id: o._id,
-        type: o.items?.[0]?.quantity > 0 ? 'Buy' : 'Sell',
-        symbol: o.items?.[0]?.name || 'RELIANCE',
-        shares: o.items?.[0]?.quantity || 10,
-        amount: o.totalAmount ? `$${o.totalAmount.toFixed(2)}` : '$28,924.50',
-        date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Dec 12, 2024',
-      }))
+    ? orders.slice(0, 4).map((o) => {
+        const item = o.items?.[0] || {};
+        const side = o.side ? (o.side.toUpperCase() === 'SELL' ? 'Sell' : 'Buy') : (item.quantity > 0 ? 'Buy' : 'Sell');
+        return {
+          id: o._id,
+          type: side,
+          symbol: item.sku || item.name || 'EQUITY',
+          shares: item.quantity || 10,
+          amount: o.totalAmount ? `$${Number(o.totalAmount).toFixed(2)}` : '$2,892.45',
+          date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+        };
+      })
     : [
         { id: '1', type: 'Buy', symbol: 'RELIANCE', shares: 10, amount: '$28,924.50', date: 'Dec 12, 2024' },
         { id: '2', type: 'Sell', symbol: 'TCS', shares: 5, amount: '$20,619.00', date: 'Dec 11, 2024' },
@@ -143,7 +155,7 @@ export default function DashboardView({
       <div className="view-header">
         <div>
           <h1 className="view-title">Dashboard</h1>
-          <p className="view-subtitle">Welcome back! Here's your investment overview.</p>
+          <p className="view-subtitle">Welcome back! Here is your investment overview.</p>
         </div>
       </div>
 
@@ -158,11 +170,11 @@ export default function DashboardView({
             </div>
           </div>
           <div className="kpi-value-row">
-            <h2 className="kpi-value">$24,567.89</h2>
+            <h2 className="kpi-value">${portfolioVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
           </div>
           <div className="kpi-trend-row">
             <span className="trend-pill trend-up">
-              <ArrowUpRight size={13} /> +12.34% (+$2,698.45)
+              <ArrowUpRight size={13} /> {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(2)}% (+${totalPnL.toFixed(2)})
             </span>
           </div>
         </div>
@@ -176,11 +188,11 @@ export default function DashboardView({
             </div>
           </div>
           <div className="kpi-value-row">
-            <h2 className="kpi-value">$18,450.00</h2>
+            <h2 className="kpi-value">${investedVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
           </div>
           <div className="kpi-trend-row">
             <span className="trend-pill trend-up-blue">
-              <ArrowUpRight size={13} /> +6.21% (+$1,078.34)
+              <ArrowUpRight size={13} /> Principal Capital
             </span>
           </div>
         </div>
@@ -194,11 +206,13 @@ export default function DashboardView({
             </div>
           </div>
           <div className="kpi-value-row">
-            <h2 className="kpi-value text-emerald">+$1,234.56</h2>
+            <h2 className={`kpi-value ${todayPnL >= 0 ? 'text-emerald' : 'text-danger'}`}>
+              {todayPnL >= 0 ? '+' : ''}${todayPnL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </h2>
           </div>
           <div className="kpi-trend-row">
-            <span className="trend-pill trend-up">
-              <ArrowUpRight size={13} /> +5.28%
+            <span className={`trend-pill ${todayPnL >= 0 ? 'trend-up' : 'trend-down'}`}>
+              <ArrowUpRight size={13} /> +{todayReturnPct}%
             </span>
           </div>
         </div>
@@ -212,11 +226,13 @@ export default function DashboardView({
             </div>
           </div>
           <div className="kpi-value-row">
-            <h2 className="kpi-value text-purple">+33.12%</h2>
+            <h2 className={`kpi-value ${totalReturnPct >= 0 ? 'text-purple' : 'text-danger'}`}>
+              {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(2)}%
+            </h2>
           </div>
           <div className="kpi-trend-row">
             <span className="trend-pill trend-up">
-              +$6,117.89
+              {totalPnL >= 0 ? '+' : ''}${totalPnL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -231,10 +247,10 @@ export default function DashboardView({
               <h3 className="card-heading">Portfolio Performance</h3>
               <div className="chart-current-stat">
                 <span className="chart-price-large">
-                  ${hoveredPoint ? hoveredPoint.val.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '24,567.89'}
+                  ${hoveredPoint ? hoveredPoint.val.toLocaleString('en-US', { minimumFractionDigits: 2 }) : portfolioVal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
                 <span className="trend-pill trend-up">
-                  <ArrowUpRight size={12} /> +12.34%
+                  <ArrowUpRight size={12} /> {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(2)}%
                 </span>
               </div>
             </div>
@@ -444,7 +460,7 @@ export default function DashboardView({
                   <span className="equity-subname">{stock.name}</span>
                 </div>
                 <div className="equity-price-col">
-                  <span className="equity-price">₹{stock.price.toFixed(2)}</span>
+                  <span className="equity-price">${stock.price.toFixed(2)}</span>
                   <span className="equity-change text-emerald">{stock.change}</span>
                 </div>
               </div>
@@ -486,7 +502,7 @@ export default function DashboardView({
                   <span className="equity-subname">{stock.name}</span>
                 </div>
                 <div className="equity-price-col">
-                  <span className="equity-price">₹{stock.price.toFixed(2)}</span>
+                  <span className="equity-price">${stock.price.toFixed(2)}</span>
                   <span className="equity-change text-danger">{stock.change}</span>
                 </div>
               </div>

@@ -41,13 +41,26 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Database Connection Middleware for Serverless & Long-running instances
+// Database Connection Middleware for Serverless & Long-running instances with smart cooldown
 let hasLoggedNetworkWarning = false;
+let lastDbAttemptTime = 0;
+const DB_RETRY_COOLDOWN_MS = 30000;
+
 app.use(async (req, res, next) => {
+  if (mongoose.connection.readyState === 1) {
+    req.dbConnected = true;
+    return next();
+  }
+
+  const now = Date.now();
+  if (now - lastDbAttemptTime < DB_RETRY_COOLDOWN_MS) {
+    req.dbConnected = false;
+    return next();
+  }
+
+  lastDbAttemptTime = now;
   try {
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
-    }
+    await connectDB();
     req.dbConnected = true;
   } catch (err) {
     req.dbConnected = false;

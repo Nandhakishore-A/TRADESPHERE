@@ -4,11 +4,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Star,
-  Info,
-  TrendingUp,
-  Activity,
-  Layers,
-  Newspaper
+  Info
 } from 'lucide-react';
 
 export default function StockDetailsView({

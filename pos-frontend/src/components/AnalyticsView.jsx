@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  TrendingUp,
   Shield,
   FileText,
   Download,

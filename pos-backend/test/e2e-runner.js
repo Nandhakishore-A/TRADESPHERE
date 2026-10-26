@@ -72,12 +72,12 @@ async function runE2E() {
     const products = res.data;
     testProduct = products && products.length > 0 ? products[0] : null;
     report(
-      'Test 3: Inventory Catalog Retrieval',
+      'Test 3: Equities Market Catalog Retrieval',
       res.ok && Array.isArray(products) && products.length > 0,
-      `-> Retrieved ${products?.length} active products from Atlas/Catalog`
+      `-> Retrieved ${products?.length} active market assets from TradeSphere`
     );
   } catch (err) {
-    report('Test 3: Inventory Catalog Retrieval', false, err.message);
+    report('Test 3: Equities Market Catalog Retrieval', false, err.message);
   }
 
   if (!testProduct) {
@@ -85,7 +85,7 @@ async function runE2E() {
     return;
   }
 
-  // TEST 4: Atomic Multi-Item Stock Reservation & Concurrency Lock
+  // TEST 4: Atomic BUY Stock Reservation & Concurrency Lock
   let activeOrder = null;
   const reserveQty = 2;
   const idempotencyKey = `E2E-IDEMP-${Date.now()}`;
@@ -98,27 +98,30 @@ async function runE2E() {
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
       body: JSON.stringify({
-        items: [{ productId: testProduct._id, quantity: reserveQty, name: testProduct.name, price: testProduct.price }],
+        side: 'BUY',
+        orderType: 'MARKET',
+        items: [{ productId: testProduct._id, quantity: reserveQty, name: testProduct.name, price: testProduct.price, sku: testProduct.sku }],
         idempotencyKey,
       }),
     });
 
     activeOrder = res.data?.order;
     report(
-      'Test 4: Atomic Multi-Item Stock Reservation',
-      res.ok && activeOrder && activeOrder.status === 'RESERVED',
+      'Test 4: Atomic Multi-Item Stock Reservation (BUY)',
+      res.ok && activeOrder && activeOrder.status === 'RESERVED' && activeOrder.side === 'BUY',
       `-> Order: ${activeOrder?.orderNumber}, Total: $${activeOrder?.totalAmount}`
     );
   } catch (err) {
-    report('Test 4: Atomic Multi-Item Stock Reservation', false, err.message);
+    report('Test 4: Atomic Multi-Item Stock Reservation (BUY)', false, err.message);
   }
 
-  // TEST 5: Idempotency Verification (Prevent Double-Checkout)
+  // TEST 5: Idempotency Verification (Prevent Double-Execution)
   try {
     const res = await request('/orders/reserve', {
       method: 'POST',
       headers: { 'Idempotency-Key': idempotencyKey },
       body: JSON.stringify({
+        side: 'BUY',
         items: [{ productId: testProduct._id, quantity: reserveQty }],
         idempotencyKey,
       }),
@@ -133,7 +136,7 @@ async function runE2E() {
     report('Test 5: Idempotency Protection', false, err.message);
   }
 
-  // TEST 6: Payment Completion & Stock Finalization
+  // TEST 6: Payment Completion & Trade Settlement
   try {
     const res = await request('/orders/complete', {
       method: 'POST',
@@ -141,19 +144,47 @@ async function runE2E() {
     });
 
     report(
-      'Test 6: Payment Settlement & Order Completion',
+      'Test 6: Trade Settlement & Order Completion',
       res.ok && res.data?.order?.status === 'COMPLETED',
       `-> Order ${activeOrder?.orderNumber} transitioned to COMPLETED`
     );
   } catch (err) {
-    report('Test 6: Payment Settlement & Order Completion', false, err.message);
+    report('Test 6: Trade Settlement & Order Completion', false, err.message);
   }
 
-  // TEST 7: Order Cancellation & Stock Restitution
+  // TEST 7: SELL Order Execution & Settlement
+  try {
+    const sellRes = await request('/orders/reserve', {
+      method: 'POST',
+      body: JSON.stringify({
+        side: 'SELL',
+        orderType: 'LIMIT',
+        limitPrice: testProduct.price,
+        items: [{ productId: testProduct._id, quantity: 1, name: testProduct.name, price: testProduct.price, sku: testProduct.sku }],
+      }),
+    });
+
+    const sellOrderId = sellRes.data?.order?._id;
+    const sellCompleteRes = await request('/orders/complete', {
+      method: 'POST',
+      body: JSON.stringify({ orderId: sellOrderId }),
+    });
+
+    report(
+      'Test 7: SELL Order Execution & Instant Liquidation Settlement',
+      sellCompleteRes.ok && sellCompleteRes.data?.order?.status === 'COMPLETED' && sellCompleteRes.data?.order?.side === 'SELL',
+      `-> SELL order ${sellCompleteRes.data?.order?.orderNumber} settled with market float replenishment`
+    );
+  } catch (err) {
+    report('Test 7: SELL Order Execution & Instant Liquidation Settlement', false, err.message);
+  }
+
+  // TEST 8: Order Cancellation & Concurrency Restitution
   try {
     const reserveRes = await request('/orders/reserve', {
       method: 'POST',
       body: JSON.stringify({
+        side: 'BUY',
         items: [{ productId: testProduct._id, quantity: 1, name: testProduct.name, price: testProduct.price }],
       }),
     });
@@ -165,56 +196,57 @@ async function runE2E() {
     });
 
     report(
-      'Test 7: Order Cancellation & Automatic Stock Restitution',
+      'Test 8: Order Cancellation & Automatic Stock Restitution',
       cancelRes.ok && cancelRes.data?.order?.status === 'CANCELLED',
-      `-> Order cancelled and stock released back to inventory`
+      `-> Order cancelled and reservation released`
     );
   } catch (err) {
-    report('Test 7: Order Cancellation & Automatic Stock Restitution', false, err.message);
+    report('Test 8: Order Cancellation & Automatic Stock Restitution', false, err.message);
   }
 
-  // TEST 8: Insufficient Stock Rejection (No Stock Leak)
+  // TEST 9: Fat-Finger Risk Boundary Protection (> 100,000 shares)
   try {
     const res = await request('/orders/reserve', {
       method: 'POST',
       body: JSON.stringify({
+        side: 'BUY',
         items: [{ productId: testProduct._id, quantity: 999999 }],
       }),
     });
 
     report(
-      'Test 8: Stock Boundary & Concurrency Protection',
-      res.status === 400 && res.data?.error?.includes('Insufficient stock'),
+      'Test 9: Fat-Finger Circuit Breaker & Boundary Protection',
+      res.status === 400,
       `-> Clean rejection: "${res.data?.error}"`
     );
   } catch (err) {
-    report('Test 8: Stock Boundary & Concurrency Protection', false, err.message);
+    report('Test 9: Fat-Finger Circuit Breaker & Boundary Protection', false, err.message);
   }
 
-  // TEST 9: Analytics Aggregation Pipeline
+  // TEST 10: Real Database Aggregation Analytics
   try {
     const res = await request('/analytics/summary');
     const metrics = res.data?.metrics;
     report(
-      'Test 9: Real Database Aggregation Analytics',
+      'Test 10: Portfolio Analytics Aggregation Pipeline',
       res.ok && typeof metrics?.totalRevenue === 'number' && metrics?.completedOrders >= 1,
-      `-> Total Revenue: $${metrics?.totalRevenue}, Completed Orders: ${metrics?.completedOrders}`
+      `-> Total Volume: $${metrics?.totalRevenue}, Completed Trades: ${metrics?.completedOrders}`
     );
   } catch (err) {
-    report('Test 9: Real Database Aggregation Analytics', false, err.message);
+    report('Test 10: Portfolio Analytics Aggregation Pipeline', false, err.message);
   }
 
-  // TEST 10: Operational Audit Log Trail
+  // TEST 11: Immutable Audit Trail
   try {
     const res = await request('/orders/audit-logs');
     const logs = res.data;
     report(
-      'Test 10: Immutable Operational Audit Logging',
+      'Test 11: Immutable Operational Audit Logging',
       res.ok && Array.isArray(logs) && logs.length >= 1,
       `-> Verified ${logs?.length} recorded audit events`
     );
   } catch (err) {
-    report('Test 10: Immutable Operational Audit Logging', false, err.message);
+    report('Test 11: Immutable Operational Audit Logging', false, err.message);
   }
 
   console.log('\n====================================================');

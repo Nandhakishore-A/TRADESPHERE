@@ -2,13 +2,16 @@ const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
   productId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.Mixed, // Supports ObjectId or string identifiers
     ref: 'Product',
     required: true,
   },
   name: {
     type: String,
     required: true,
+  },
+  sku: {
+    type: String,
   },
   price: {
     type: Number,
@@ -32,12 +35,32 @@ const orderSchema = new mongoose.Schema({
     type: String,
     unique: true,
     required: true,
+    index: true,
+  },
+  side: {
+    type: String,
+    enum: ['BUY', 'SELL'],
+    default: 'BUY',
+    index: true,
+  },
+  orderType: {
+    type: String,
+    enum: ['MARKET', 'LIMIT', 'STOP_LOSS'],
+    default: 'MARKET',
+  },
+  limitPrice: {
+    type: Number,
+    min: 0,
+  },
+  stopLoss: {
+    type: Number,
+    min: 0,
   },
   items: {
     type: [orderItemSchema],
     validate: {
       validator: (items) => Array.isArray(items) && items.length > 0,
-      message: 'An order must contain at least one item',
+      message: 'An order must contain at least one item/equity position',
     },
   },
   totalAmount: {
@@ -58,12 +81,19 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['CASH', 'CARD', 'ONLINE', 'MOCK'],
-    default: 'MOCK',
+    enum: ['CASH', 'CARD', 'ONLINE', 'MOCK', 'MARGIN', 'BALANCE'],
+    default: 'BALANCE',
+  },
+  traderName: {
+    type: String,
+    default: 'Floor Trader',
+  },
+  traderEmail: {
+    type: String,
   },
   cashierName: {
     type: String,
-    default: 'Default Cashier',
+    default: 'Floor Trader',
   },
   expiresAt: {
     type: Date,

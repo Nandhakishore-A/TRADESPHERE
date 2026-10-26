@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import DashboardView from './components/DashboardView';
@@ -47,9 +47,9 @@ export default function App() {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('tradesphere_user');
-      return saved ? JSON.parse(saved) : { name: 'John Doe', email: 'admin@tradesphere.io', role: 'Premium' };
+      return saved ? JSON.parse(saved) : { name: 'Nandhakishore A', email: 'admin@tradesphere.io', role: 'admin' };
     } catch {
-      return { name: 'John Doe', email: 'admin@tradesphere.io', role: 'Premium' };
+      return { name: 'Nandhakishore A', email: 'admin@tradesphere.io', role: 'admin' };
     }
   });
   const [token, setToken] = useState(() => localStorage.getItem('tradesphere_token') || '');
@@ -134,22 +134,107 @@ export default function App() {
   }, []);
 
   // Global Refresh Trigger
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([fetchStocks(), fetchOrders(), fetchAnalytics()]);
     setIsRefreshing(false);
-  };
-
-  // Background Auto-sync (30s)
-  useEffect(() => {
-    handleRefresh();
-    const interval = setInterval(() => {
-      fetchStocks();
-      fetchOrders();
-      fetchAnalytics();
-    }, 30000);
-    return () => clearInterval(interval);
   }, [fetchStocks, fetchOrders, fetchAnalytics]);
+
+  // Initial and Background Auto-sync (30s)
+  useEffect(() => {
+    let isCancelled = false;
+    const syncData = async () => {
+      if (!isCancelled) {
+        await fetchStocks();
+        await fetchOrders();
+        await fetchAnalytics();
+      }
+    };
+    syncData();
+    const interval = setInterval(syncData, 30000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [fetchStocks, fetchOrders, fetchAnalytics]);
+
+  // Dynamic Portfolio & Balance Computation
+  const portfolioMetrics = useMemo(() => {
+    const baseHoldings = [
+      { symbol: 'RELIANCE', name: 'Reliance Industries', shares: 10, avgPrice: 2450.00, ltp: 2892.45, sector: 'Energy & Retail' },
+      { symbol: 'TCS', name: 'Tata Consultancy Services', shares: 5, avgPrice: 3650.00, ltp: 4123.80, sector: 'Technology' },
+      { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', shares: 8, avgPrice: 1450.00, ltp: 1678.90, sector: 'Banking' },
+      { symbol: 'INFY', name: 'Infosys Ltd', shares: 15, avgPrice: 1250.00, ltp: 1456.20, sector: 'Technology' },
+      { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', shares: 12, avgPrice: 1100.00, ltp: 1234.50, sector: 'Banking' },
+    ];
+
+    let cash = 25000.00; // Liquid starting capital
+    const holdingsMap = {};
+    baseHoldings.forEach((h) => {
+      holdingsMap[h.symbol] = { ...h };
+    });
+
+    // Apply real settled orders
+    orders.forEach((o) => {
+      if (o.status === 'COMPLETED') {
+        const item = o.items?.[0];
+        if (item) {
+          const sym = item.sku || item.name;
+          const isBuy = o.side ? o.side.toUpperCase() === 'BUY' : item.quantity > 0;
+          const qty = item.quantity || 0;
+          const price = item.price || 0;
+          const orderTotal = o.totalAmount || (qty * price);
+
+          if (isBuy) {
+            cash -= orderTotal;
+            if (!holdingsMap[sym]) {
+              holdingsMap[sym] = {
+                symbol: sym,
+                name: item.name || sym,
+                shares: 0,
+                avgPrice: price,
+                ltp: price,
+                sector: 'Equities',
+              };
+            }
+            const h = holdingsMap[sym];
+            const oldCost = h.shares * h.avgPrice;
+            const newCost = qty * price;
+            const totalShares = h.shares + qty;
+            h.shares = totalShares;
+            h.avgPrice = totalShares > 0 ? (oldCost + newCost) / totalShares : price;
+          } else {
+            cash += orderTotal;
+            if (holdingsMap[sym]) {
+              holdingsMap[sym].shares = Math.max(0, holdingsMap[sym].shares - qty);
+            }
+          }
+        }
+      }
+    });
+
+    const activeHoldings = Object.values(holdingsMap).filter((h) => h.shares > 0);
+    const holdingsValuation = activeHoldings.reduce((sum, h) => {
+      const live = stocks.find((s) => s.sku === h.symbol);
+      const ltp = live ? live.price : h.ltp;
+      return sum + (h.shares * ltp);
+    }, 0);
+
+    const totalInvested = activeHoldings.reduce((sum, h) => sum + (h.shares * h.avgPrice), 0);
+    const totalPnL = holdingsValuation - totalInvested;
+    const totalReturnPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+    const portfolioValue = holdingsValuation + cash;
+
+    return {
+      holdings: activeHoldings,
+      cashBalance: cash,
+      portfolioValue,
+      totalInvested,
+      totalPnL,
+      totalReturnPct,
+      todayPnL: totalPnL * 0.18,
+    };
+  }, [stocks, orders]);
 
   // 1-Click Seed Market Equities & Accounts
   const handleSeedDemoData = async () => {
@@ -169,7 +254,7 @@ export default function App() {
 
   // Trade Execution Workflow (Connects to /api/orders/reserve and /api/orders/complete)
   const handleExecuteTrade = async (tradePayload) => {
-    const { stock, side, quantity, price } = tradePayload;
+    const { stock, side, quantity, price, orderType, limitPrice, stopLoss } = tradePayload;
     try {
       setIsProcessingTrade(true);
       const idempotencyKey = `TRADE-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -178,7 +263,7 @@ export default function App() {
       const matched = stocks.find((s) => s.sku === (stock.sku || stock.symbol)) || stock;
       const targetProductId = matched._id || matched.stockId || stock._id || stock.stockId || stock.sku || stock.symbol || 'stock-rel-01';
 
-      // 1. Reserve Order
+      // 1. Reserve Order with Concurrency Lock & Risk Controls
       const reserveRes = await fetch(`${API_BASE_URL}/api/orders/reserve`, {
         method: 'POST',
         headers: {
@@ -187,11 +272,17 @@ export default function App() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          side,
+          orderType: orderType || 'MARKET',
+          limitPrice,
+          stopLoss,
           productId: targetProductId,
           sku: stock.sku || stock.symbol,
           name: stock.name,
           price,
           quantity,
+          traderName: user?.name || 'Floor Trader',
+          traderEmail: user?.email || '',
           idempotencyKey,
         }),
       });
@@ -216,7 +307,7 @@ export default function App() {
         throw new Error(completeData.error || 'Trade settlement confirmation failed');
       }
 
-      showToast(`Order Executed! ${side} ${quantity} ${stock.sku} @ $${price.toFixed(2)} (Ref: ${completeData.order.orderNumber})`, 'success');
+      showToast(`Trade Settled! ${side} ${quantity} ${stock.sku || stock.symbol} @ $${price.toFixed(2)} (Ref: ${completeData.order.orderNumber})`, 'success');
       setIsTradeModalOpen(false);
       handleRefresh();
     } catch (err) {
@@ -259,8 +350,7 @@ export default function App() {
 
   // Open trade modal for specific stock
   const handleOpenTradeForStock = (stockToTrade, side = 'BUY') => {
-    // If no stock provided, fallback to first stock or default
-    const target = stockToTrade || (stocks.length > 0 ? stocks[0] : { name: 'Reliance Industries', sku: 'RELIANCE', price: 2892.45 });
+    const target = stockToTrade || (stocks.length > 0 ? stocks[0] : { name: 'Reliance Industries Ltd', sku: 'RELIANCE', price: 2892.45 });
     setTradeModalStock(target);
     setTradeModalSide(side);
     setIsTradeModalOpen(true);
@@ -284,6 +374,29 @@ export default function App() {
     setUser(null);
     setToken('');
     showToast('Signed out of TradeSphere', 'info');
+  };
+
+  // Profile update handler
+  const handleUpdateUser = async (updated) => {
+    setUser(updated);
+    localStorage.setItem('tradesphere_user', JSON.stringify(updated));
+    if (token) {
+      try {
+        await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: updated.name,
+            email: updated.email,
+          }),
+        });
+      } catch (e) {
+        console.warn('Profile sync error:', e);
+      }
+    }
   };
 
   return (
@@ -344,6 +457,7 @@ export default function App() {
           {currentView === 'dashboard' && (
             <DashboardView
               portfolioData={analytics}
+              portfolioMetrics={portfolioMetrics}
               stocks={stocks}
               orders={orders}
               onSelectStock={handleSelectStock}
@@ -387,6 +501,8 @@ export default function App() {
             <PortfolioView
               stocks={stocks}
               orders={orders}
+              dynamicHoldings={portfolioMetrics.holdings}
+              cashBalance={portfolioMetrics.cashBalance}
               onSelectStock={handleSelectStock}
               onOpenTradeModal={handleOpenTradeForStock}
             />
@@ -410,7 +526,7 @@ export default function App() {
           {currentView === 'settings' && (
             <SettingsView
               user={user}
-              onUpdateUser={(updated) => setUser(updated)}
+              onUpdateUser={handleUpdateUser}
               showToast={showToast}
             />
           )}

@@ -4,12 +4,9 @@ import {
   Tag,
   ArrowUpRight,
   X,
-  TrendingUp,
   Share2,
   Bookmark,
-  CheckCircle2,
-  ExternalLink,
-  ChevronRight
+  CheckCircle2
 } from 'lucide-react';
 
 export default function NewsView({ onSelectStock, onOpenTradeModal }) {
@@ -218,7 +215,6 @@ export default function NewsView({ onSelectStock, onOpenTradeModal }) {
       <div className="news-cards-grid">
         {filtered.map((item) => {
           const isBookmarked = bookmarkedIds.includes(item.id);
-          const isCopied = copiedId === item.id;
           return (
             <article
               key={item.id}

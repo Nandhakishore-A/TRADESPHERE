@@ -12,21 +12,23 @@ export default function TransactionsView({ orders = [] }) {
 
   // Sample static defaults if database empty
   const defaultTransactions = [
-    { id: 'TX-101', date: 'Dec 12, 2024', type: 'Buy', symbol: 'RELIANCE', shares: 10, price: 2892.45, total: 28924.50, status: 'COMPLETED' },
-    { id: 'TX-102', date: 'Dec 11, 2024', type: 'Sell', symbol: 'TCS', shares: 5, price: 4123.80, total: 20619.00, status: 'COMPLETED' },
-    { id: 'TX-103', date: 'Dec 10, 2024', type: 'Buy', symbol: 'INFY', shares: 15, price: 1456.20, total: 21843.00, status: 'COMPLETED' },
-    { id: 'TX-104', date: 'Dec 08, 2024', type: 'Buy', symbol: 'HDFCBANK', shares: 8, price: 1678.90, total: 13431.20, status: 'COMPLETED' },
-    { id: 'TX-105', date: 'Dec 05, 2024', type: 'Buy', ICICIBANK: 'ICICIBANK', symbol: 'ICICIBANK', shares: 12, price: 1234.50, total: 14814.00, status: 'COMPLETED' },
+    { id: 'TX-101', date: 'Dec 12, 2024', type: 'Buy', orderType: 'MARKET', symbol: 'RELIANCE', shares: 10, price: 2892.45, total: 28924.50, status: 'COMPLETED' },
+    { id: 'TX-102', date: 'Dec 11, 2024', type: 'Sell', orderType: 'LIMIT', symbol: 'TCS', shares: 5, price: 4123.80, total: 20619.00, status: 'COMPLETED' },
+    { id: 'TX-103', date: 'Dec 10, 2024', type: 'Buy', orderType: 'MARKET', symbol: 'INFY', shares: 15, price: 1456.20, total: 21843.00, status: 'COMPLETED' },
+    { id: 'TX-104', date: 'Dec 08, 2024', type: 'Buy', orderType: 'STOP_LOSS', symbol: 'HDFCBANK', shares: 8, price: 1678.90, total: 13431.20, status: 'COMPLETED' },
+    { id: 'TX-105', date: 'Dec 05, 2024', type: 'Buy', orderType: 'MARKET', symbol: 'ICICIBANK', shares: 12, price: 1234.50, total: 14814.00, status: 'COMPLETED' },
   ];
 
-  // Map orders from MongoDB
+  // Map orders from MongoDB / backend
   const liveTransactions = orders.map((o) => {
     const item = o.items?.[0] || {};
+    const determinedType = o.side ? (o.side.toUpperCase() === 'SELL' ? 'Sell' : 'Buy') : (item.quantity > 0 ? 'Buy' : 'Sell');
     return {
-      id: o.orderNumber || o._id.slice(-6),
-      date: new Date(o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      type: o.items?.[0]?.quantity > 0 ? 'Buy' : 'Sell',
-      symbol: item.name || 'EQUITY',
+      id: o.orderNumber || (o._id ? o._id.slice(-6) : 'TX-LIVE'),
+      date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+      type: determinedType,
+      orderType: o.orderType || 'MARKET',
+      symbol: item.sku || item.name || 'EQUITY',
       shares: item.quantity || 1,
       price: item.price || 0,
       total: o.totalAmount || 0,
@@ -38,7 +40,10 @@ export default function TransactionsView({ orders = [] }) {
 
   const filtered = merged.filter((t) => {
     const matchType = filterType === 'All' || t.type.toLowerCase() === filterType.toLowerCase();
-    const matchSearch = t.symbol.toLowerCase().includes(search.toLowerCase()) || t.id.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      t.symbol.toLowerCase().includes(search.toLowerCase()) ||
+      t.id.toLowerCase().includes(search.toLowerCase()) ||
+      t.orderType.toLowerCase().includes(search.toLowerCase());
     return matchType && matchSearch;
   });
 
@@ -48,14 +53,14 @@ export default function TransactionsView({ orders = [] }) {
       <div className="view-header">
         <div>
           <h1 className="view-title">Transactions</h1>
-          <p className="view-subtitle">Execution history and trade settlements recorded in MongoDB</p>
+          <p className="view-subtitle">Live execution history and trade settlements recorded in TradeSphere</p>
         </div>
       </div>
 
       {/* Filter Tabs & Search */}
       <div className="transactions-toolbar">
         <div className="category-tabs-group">
-          {['All', 'Buy', 'Sell', 'Dividends'].map((ft) => (
+          {['All', 'Buy', 'Sell'].map((ft) => (
             <button
               key={ft}
               type="button"
@@ -86,10 +91,11 @@ export default function TransactionsView({ orders = [] }) {
             <thead>
               <tr>
                 <th style={{ textAlign: 'left' }}>Date</th>
+                <th style={{ textAlign: 'left' }}>Side</th>
                 <th style={{ textAlign: 'left' }}>Type</th>
-                <th style={{ textAlign: 'left' }}>Symbol</th>
+                <th style={{ textAlign: 'left' }}>Asset / Position</th>
                 <th style={{ textAlign: 'center' }}>Shares</th>
-                <th style={{ textAlign: 'right' }}>Execution Price</th>
+                <th style={{ textAlign: 'right' }}>Price</th>
                 <th style={{ textAlign: 'right' }}>Total Amount</th>
                 <th style={{ textAlign: 'right' }}>Status</th>
               </tr>
@@ -97,7 +103,7 @@ export default function TransactionsView({ orders = [] }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-muted">
+                  <td colSpan="8" className="text-center py-8 text-muted">
                     No transactions match your current filter.
                   </td>
                 </tr>
@@ -108,6 +114,11 @@ export default function TransactionsView({ orders = [] }) {
                     <td>
                       <span className={`trade-badge ${t.type.toLowerCase() === 'buy' ? 'badge-buy' : 'badge-sell'}`}>
                         {t.type}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-xs font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded">
+                        {t.orderType}
                       </span>
                     </td>
                     <td>
