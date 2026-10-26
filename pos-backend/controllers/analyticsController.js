@@ -83,6 +83,7 @@ const getDashboardSummary = async (req, res) => {
     } catch (dbErr) {
       console.warn('[TradeSphere] Live DB analytics error, serving resilient metrics summary');
     }
+  }
 
     // Resilient fallback analytics metrics
     res.json({

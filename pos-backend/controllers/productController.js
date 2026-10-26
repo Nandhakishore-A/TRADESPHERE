@@ -131,33 +131,36 @@ const createProduct = async (req, res) => {
         await product.save();
 
         await AuditLog.create({
-        action: 'STOCK_ADDED',
-        entityType: 'PRODUCT',
-        entityId: product._id.toString(),
-        description: `New stock/asset listed: "${product.name}" (${product.sku}) at $${product.price}, Available: ${product.stock} shares`,
-        metadata: { name: product.name, price: product.price, stock: product.stock, sku: product.sku },
-        performedBy: req.user ? `${req.user.name} (${req.user.role})` : 'Anonymous / Trader',
-        ipAddress: req.ip,
-      }).catch(() => null);
+          action: 'STOCK_ADDED',
+          entityType: 'PRODUCT',
+          entityId: product._id.toString(),
+          description: `New stock/asset listed: "${product.name}" (${product.sku}) at $${product.price}, Available: ${product.stock} shares`,
+          metadata: { name: product.name, price: product.price, stock: product.stock, sku: product.sku },
+          performedBy: req.user ? `${req.user.name} (${req.user.role})` : 'Anonymous / Trader',
+          ipAddress: req.ip,
+        }).catch(() => null);
 
-      return res.status(201).json(product);
-    } catch (dbErr) {
-      // In-memory fallback
-      const mockProduct = {
-        _id: `stock-${Date.now()}`,
-        name: name.trim(),
-        sku: generatedSku,
-        category: category ? category.trim() : 'General',
-        price: parsedPrice,
-        stock: parsedStock,
-        reservedStock: 0,
-        lowStockThreshold: parsedThreshold,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-      };
-      inMemoryStocks.unshift(mockProduct);
-      return res.status(201).json(mockProduct);
+        return res.status(201).json(product);
+      } catch (dbErr) {
+        // Fallback to in-memory store
+      }
     }
+
+    // In-memory fallback
+    const mockProduct = {
+      _id: `stock-${Date.now()}`,
+      name: name.trim(),
+      sku: generatedSku,
+      category: category ? category.trim() : 'General',
+      price: parsedPrice,
+      stock: parsedStock,
+      reservedStock: 0,
+      lowStockThreshold: parsedThreshold,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    inMemoryStocks.unshift(mockProduct);
+    return res.status(201).json(mockProduct);
   } catch (err) {
     res.status(500).json({ error: 'Failed to create stock/asset: ' + err.message });
   }
