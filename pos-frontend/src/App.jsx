@@ -401,7 +401,10 @@ export default function App() {
           )}
 
           {currentView === 'news' && (
-            <NewsView />
+            <NewsView
+              onSelectStock={handleSelectStock}
+              onOpenTradeModal={handleOpenTradeForStock}
+            />
           )}
 
           {currentView === 'settings' && (

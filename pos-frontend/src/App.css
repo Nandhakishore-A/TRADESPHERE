@@ -1973,6 +1973,15 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.news-read-more:hover {
+  color: var(--color-primary-hover);
+  gap: 7px;
 }
 
 /* ==========================================================================
